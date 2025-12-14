@@ -1,0 +1,143 @@
+provider: gemini
+openrouter:
+  api_key: YOUR KEY
+  base_url: https://openrouter.ai/api/v1
+  model: moonshotai/kimi-k2
+gemini:
+  api_key: 
+  model: gemini-2.5-flash
+system_prompt: "You are a helpful research assistant. When users ask questions that\
+  \ require \ncurrent information or web search, use the search tool and all other\
+  \ tools available to find relevant \ninformation and provide comprehensive answers\
+  \ based on the results.\n\nIMPORTANT: When you have fully satisfied the user's request\
+  \ and provided a complete answer, \nyou MUST call the mark_task_complete tool with\
+  \ a summary of what was accomplished and \na final message for the user. This signals\
+  \ that the task is finished.\n"
+agent:
+  max_iterations: 12
+orchestrator:
+  parallel_agents: 4
+  task_timeout: 300
+  aggregation_strategy: consensus
+  question_generation_prompt: 'You are an orchestrator that needs to create {num_agents}
+    different questions to thoroughly analyze this topic from multiple angles.
+
+
+    Original user query: {user_input}
+
+
+    Generate exactly {num_agents} different, specific questions that will help gather
+    comprehensive information about this topic.
+
+    Each question should approach the topic from a different angle (research, analysis,
+    verification, alternatives, etc.).
+
+
+    Return your response as a JSON array of strings, like this:
+
+    ["question 1", "question 2", "question 3", "question 4"]
+
+
+    Only return the JSON array, nothing else.
+
+    '
+  synthesis_prompt: "You have {num_responses} different AI agents that analyzed the\
+    \ same query from different perspectives. \nYour job is to synthesize their responses\
+    \ into ONE comprehensive final answer.\n\nHere are all the agent responses:\n\n\
+    {agent_responses}\n\nIMPORTANT: Just synthesize these into ONE final comprehensive\
+    \ answer that combines the best information from all agents. \nDo NOT call mark_task_complete\
+    \ or any other tools. Do NOT mention that you are synthesizing multiple responses.\
+    \ \nStart your response directly with the answer. Do not include any introductory or concluding remarks about the synthesis process. \nSimply provide the final synthesized answer directly as your response.\n"
+search:
+  max_results: 5
+  user_agent: Mozilla/5.0 (compatible; OpenRouter Agent)
+megamind:
+  question_generation_prompt: |
+    You are a strategic question generator. Given a user query, generate exactly 4 specialized questions that will help gather comprehensive information.
+
+    Original query: {user_input}
+
+    Generate 4 questions, each from a different angle:
+    1. Research-focused: Gather factual information and data
+    2. Analysis-focused: Examine implications, patterns, and deeper meaning
+    3. Alternatives-focused: Explore different approaches, options, or perspectives
+    4. Verification-focused: Cross-check facts, identify potential issues or contradictions
+
+    Return ONLY a JSON array of 4 strings:
+    ["research question", "analysis question", "alternatives question", "verification question"]
+  synthesis_prompt: |
+    You have received responses from 4 specialized research agents analyzing a query from different angles.
+
+    AGENT RESPONSES:
+    {agent_responses}
+
+    Synthesize these into a comprehensive first draft that combines insights from all perspectives.
+    Focus on creating a cohesive, well-organized response.
+    Do not mention that this is a synthesis or draft.
+  validation_prompt_1: |
+    You are Validation Agent 1: Accuracy Checker.
+
+    ORIGINAL USER QUERY:
+    {original_query}
+
+    DRAFT ANSWER:
+    {draft_answer}
+
+    Your task:
+    1. Verify the draft actually answers the original question
+    2. Check for factual accuracy and consistency
+    3. Identify any gaps or missing information
+    4. Suggest specific improvements
+
+    Provide a structured critique with:
+    - Accuracy score (1-10)
+    - List of issues found
+    - Suggested improvements
+  validation_prompt_2: |
+    You are Validation Agent 2: Quality Reviewer.
+
+    ORIGINAL USER QUERY:
+    {original_query}
+
+    DRAFT ANSWER:
+    {draft_answer}
+
+    Your task:
+    1. Evaluate clarity and organization
+    2. Check for completeness and depth
+    3. Assess if the response is actionable and useful
+    4. Suggest improvements for readability
+
+    Provide a structured critique with:
+    - Quality score (1-10)
+    - Strengths of the response
+    - Areas for improvement
+  final_synthesis_prompt: |
+    You are the Final Synthesis Agent. Your job is to create the definitive answer.
+
+    ORIGINAL USER QUERY:
+    {original_query}
+
+    FIRST DRAFT:
+    {draft_answer}
+
+    VALIDATION AGENT 1 FEEDBACK:
+    {validation_1}
+
+    VALIDATION AGENT 2 FEEDBACK:
+    {validation_2}
+
+    Create the final, polished answer.
+    
+    STRUCTURE YOUR RESPONSE EXACTLY AS FOLLOWS:
+
+    ## Executive Summary
+    [Provide a concise 2-3 sentence summary of the answer]
+
+    ## Final Answer
+    [Provide the complete but focused answer. Integrate the validation feedback to improve accuracy and clarity. Avoid unnecessary verbosity or showing the step-by-step working unless asked.]
+
+    IMPORTANT:
+    - Do NOT output any JSON at the end.
+    - Do NOT mention "Validation Agent" or "Draft" in the final text.
+    - Start directly with the header "## Executive Summary".

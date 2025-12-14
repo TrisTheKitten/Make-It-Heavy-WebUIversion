@@ -1,0 +1,8 @@
+openai
+google-genai
+requests
+beautifulsoup4
+pyyaml
+ddgs
+flask
+flask-cors

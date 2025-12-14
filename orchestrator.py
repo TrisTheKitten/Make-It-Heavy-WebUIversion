@@ -1,0 +1,218 @@
+import json
+import yaml
+import time
+import threading
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from typing import List, Dict, Any, Optional
+from agent import create_agent
+
+class TaskOrchestrator:
+    def __init__(self, config_path="config.yaml", silent=False):
+        # Load configuration
+        with open(config_path, 'r') as f:
+            self.config = yaml.safe_load(f)
+        
+        self.num_agents = self.config['orchestrator']['parallel_agents']
+        self.task_timeout = self.config['orchestrator']['task_timeout']
+        self.aggregation_strategy = self.config['orchestrator']['aggregation_strategy']
+        self.silent = silent
+        
+        # Track agent progress
+        self.agent_progress = {}
+        self.agent_results = {}
+        self.progress_lock = threading.Lock()
+    
+    def decompose_task(self, user_input: str, num_agents: int, images: Optional[List[dict]] = None) -> List[str]:
+        """Use AI to dynamically generate different questions based on user input"""
+        
+        question_agent = create_agent(silent=True)
+        
+        prompt_template = self.config['orchestrator']['question_generation_prompt']
+        
+        image_context = ""
+        if images:
+            image_context = f"\n\nNote: The user has attached {len(images)} image(s) to their query. Generate subtasks that appropriately analyze or reference these images where relevant."
+        
+        generation_prompt = prompt_template.format(
+            user_input=user_input + image_context,
+            num_agents=num_agents
+        )
+        
+        question_agent.remove_tool('mark_task_complete')
+        
+        try:
+            response = question_agent.run(generation_prompt, images=images)
+            
+            # Parse JSON response
+            questions = json.loads(response.strip())
+            
+            # Validate we got the right number of questions
+            if len(questions) != num_agents:
+                raise ValueError(f"Expected {num_agents} questions, got {len(questions)}")
+            
+            return questions
+            
+        except (json.JSONDecodeError, ValueError) as e:
+            # Fallback: create simple variations if AI fails
+            return [
+                f"Research comprehensive information about: {user_input}",
+                f"Analyze and provide insights about: {user_input}",
+                f"Find alternative perspectives on: {user_input}",
+                f"Verify and cross-check facts about: {user_input}"
+            ][:num_agents]
+    
+    def update_agent_progress(self, agent_id: int, status: str, result: str = None):
+        """Thread-safe progress tracking"""
+        with self.progress_lock:
+            self.agent_progress[agent_id] = status
+            if result is not None:
+                self.agent_results[agent_id] = result
+    
+    def run_agent_parallel(self, agent_id: int, subtask: str, images: Optional[List[dict]] = None) -> Dict[str, Any]:
+        """
+        Run a single agent with the given subtask.
+        Returns result dictionary with agent_id, status, and response.
+        """
+        try:
+            self.update_agent_progress(agent_id, "PROCESSING...")
+            
+            agent = create_agent(silent=True)
+            
+            start_time = time.time()
+            response = agent.run(subtask, images=images)
+            execution_time = time.time() - start_time
+            
+            self.update_agent_progress(agent_id, "COMPLETED", response)
+            
+            return {
+                "agent_id": agent_id,
+                "status": "success", 
+                "response": response,
+                "execution_time": execution_time
+            }
+            
+        except Exception as e:
+            # Simple error handling
+            return {
+                "agent_id": agent_id,
+                "status": "error",
+                "response": f"Error: {str(e)}",
+                "execution_time": 0
+            }
+    
+    def aggregate_results(self, agent_results: List[Dict[str, Any]]) -> str:
+        """
+        Combine results from all agents into a comprehensive final answer.
+        Uses the configured aggregation strategy.
+        """
+        successful_results = [r for r in agent_results if r["status"] == "success"]
+        
+        if not successful_results:
+            return "All agents failed to provide results. Please try again."
+        
+        # Extract responses for aggregation
+        responses = [r["response"] for r in successful_results]
+        
+        if self.aggregation_strategy == "consensus":
+            return self._aggregate_consensus(responses, successful_results)
+        else:
+            # Default to consensus
+            return self._aggregate_consensus(responses, successful_results)
+    
+    def _aggregate_consensus(self, responses: List[str], _results: List[Dict[str, Any]]) -> str:
+        """
+        Use one final AI call to synthesize all agent responses into a coherent answer.
+        """
+        if len(responses) == 1:
+            return responses[0]
+        
+        # Create synthesis agent to combine all responses
+        synthesis_agent = create_agent(silent=True)
+        
+        # Build agent responses section
+        agent_responses_text = ""
+        for i, response in enumerate(responses, 1):
+            agent_responses_text += f"=== AGENT {i} RESPONSE ===\n{response}\n\n"
+        
+        # Get synthesis prompt from config and format it
+        synthesis_prompt_template = self.config['orchestrator']['synthesis_prompt']
+        synthesis_prompt = synthesis_prompt_template.format(
+            num_responses=len(responses),
+            agent_responses=agent_responses_text
+        )
+        
+        for tool_name in list(synthesis_agent.tool_mapping.keys()):
+            synthesis_agent.remove_tool(tool_name)
+        
+        # Get the synthesized response
+        try:
+            final_answer = synthesis_agent.run(synthesis_prompt)
+            return final_answer
+        except Exception as e:
+            # Log the error for debugging
+            print(f"\n🚨 SYNTHESIS FAILED: {str(e)}")
+            print("📋 Falling back to concatenated responses\n")
+            # Fallback: if synthesis fails, concatenate responses
+            combined = []
+            for i, response in enumerate(responses, 1):
+                combined.append(f"=== Agent {i} Response ===")
+                combined.append(response)
+                combined.append("")
+            return "\n".join(combined)
+    
+    def get_progress_status(self) -> Dict[int, str]:
+        """Get current progress status for all agents"""
+        with self.progress_lock:
+            return self.agent_progress.copy()
+    
+    def orchestrate(self, user_input: str, images: Optional[List[dict]] = None, status_callback=None):
+        """
+        Main orchestration method.
+        Takes user input, delegates to parallel agents, and returns aggregated result.
+        """
+        
+        self.agent_progress = {}
+        self.agent_results = {}
+        
+        subtasks = self.decompose_task(user_input, self.num_agents, images=images)
+        
+        # Initialize progress tracking
+        for i in range(self.num_agents):
+            self.agent_progress[i] = "QUEUED"
+        
+        # Execute agents in parallel
+        agent_results = []
+        
+        with ThreadPoolExecutor(max_workers=self.num_agents) as executor:
+            future_to_agent = {
+                executor.submit(self.run_agent_parallel, i, subtasks[i], images): i 
+                for i in range(self.num_agents)
+            }
+            
+            # Collect results as they complete
+            for future in as_completed(future_to_agent, timeout=self.task_timeout):
+                try:
+                    result = future.result()
+                    agent_results.append(result)
+                except Exception as e:
+                    agent_id = future_to_agent[future]
+                    agent_results.append({
+                        "agent_id": agent_id,
+                        "status": "timeout",
+                        "response": f"Agent {agent_id + 1} timed out or failed: {str(e)}",
+                        "execution_time": self.task_timeout
+                    })
+        
+        # Sort results by agent_id for consistent output
+        agent_results.sort(key=lambda x: x["agent_id"])
+        
+        # Aggregate results
+        if status_callback:
+            status_callback("Synthesizing final answer...")
+            
+        final_result = self.aggregate_results(agent_results)
+        
+        return {
+            "final_result": final_result,
+            "agent_results": agent_results
+        }

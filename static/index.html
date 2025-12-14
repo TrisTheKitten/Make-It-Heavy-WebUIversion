@@ -1,0 +1,1059 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Make It Heavy</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        neutral: {
+                            850: '#1f1f1f',
+                            900: '#171717',
+                            950: '#0a0a0a',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #0a0a0a; color: #ededed; }
+        
+        /* Custom Scrollbar for Webkit */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #333; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #444; }
+
+        /* Markdown Styles */
+        .prose h1 { font-size: 1.5rem; font-weight: 600; margin-bottom: 1rem; color: #fff; }
+        .prose h2 { font-size: 1.25rem; font-weight: 600; margin-top: 1.5rem; margin-bottom: 0.75rem; color: #fff; }
+        .prose h3 { font-size: 1.125rem; font-weight: 600; margin-top: 1.25rem; margin-bottom: 0.5rem; color: #e5e5e5; }
+        .prose p { margin-bottom: 1rem; line-height: 1.6; color: #d4d4d4; }
+        .prose ul { list-style-type: disc; padding-left: 1.5rem; margin-bottom: 1rem; color: #d4d4d4; }
+        .prose ol { list-style-type: decimal; padding-left: 1.5rem; margin-bottom: 1rem; color: #d4d4d4; }
+        .prose code { background: #262626; padding: 0.2rem 0.4rem; border-radius: 0.25rem; font-family: 'JetBrains Mono', monospace; font-size: 0.875rem; color: #e5e5e5; }
+        .prose pre { background: #171717; padding: 1rem; border-radius: 0.5rem; overflow-x: auto; margin-bottom: 1rem; border: 1px solid #262626; }
+        .prose pre code { background: transparent; padding: 0; color: #e5e5e5; }
+        .prose blockquote { border-left: 2px solid #404040; padding-left: 1rem; margin-bottom: 1rem; color: #a3a3a3; font-style: italic; }
+        .prose a { color: #fff; text-decoration: underline; text-decoration-color: #525252; text-underline-offset: 4px; }
+        .prose a:hover { text-decoration-color: #fff; }
+        .prose table { width: 100%; border-collapse: collapse; margin-bottom: 1rem; }
+        .prose th, .prose td { border: 1px solid #262626; padding: 0.75rem; text-align: left; }
+        .prose th { background: #171717; font-weight: 600; }
+
+        .fade-in { animation: fadeIn 0.2s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+
+    <!-- Header -->
+    <header class="border-b border-neutral-800 bg-neutral-950 sticky top-0 z-50">
+        <div class="max-w-5xl mx-auto px-6 h-16 flex items-center justify-between">
+            <div class="flex items-center gap-3">
+                 <!-- Simple SVG Icon -->
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-white"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+                <div>
+                    <h1 class="font-semibold text-white leading-none tracking-tight">Make It Heavy</h1>
+                    <div id="model-display" class="text-[10px] text-neutral-500 font-mono mt-1 uppercase tracking-wider"></div>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-4">
+                <div class="flex bg-neutral-900 rounded-md p-1 border border-neutral-800">
+                    <button id="mode-single" onclick="setMode('single')" class="mode-btn px-4 py-1.5 text-xs font-medium rounded transition-colors text-neutral-400 hover:text-white">Single</button>
+                    <button id="mode-multi" onclick="setMode('multi')" class="mode-btn px-4 py-1.5 text-xs font-medium rounded transition-colors bg-white text-black shadow-sm">Multi-Agent</button>
+                    <button id="mode-megamind" onclick="setMode('megamind')" class="mode-btn px-4 py-1.5 text-xs font-medium rounded transition-colors text-neutral-400 hover:text-white">Megamind</button>
+                </div>
+                <button onclick="toggleSettings()" class="text-neutral-400 hover:text-white transition-colors" aria-label="Settings">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.09a2 2 0 0 1-1-1.74v-.47a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.39a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <main class="flex-1 max-w-3xl mx-auto w-full px-6 py-12 flex flex-col gap-10">
+        
+        <!-- Input Section -->
+        <section class="space-y-4">
+            <div class="relative">
+                <textarea 
+                    id="query-input"
+                    placeholder="Describe your task..."
+                    class="w-full h-32 bg-neutral-900 border border-neutral-800 rounded-lg p-4 text-white placeholder-neutral-500 focus:outline-none focus:ring-1 focus:ring-white focus:border-neutral-700 transition-all resize-none text-base"
+                ></textarea>
+                <div class="absolute bottom-4 right-4 flex items-center gap-3">
+                     <span id="timer" class="text-xs font-mono text-neutral-500 hidden"><span id="timer-value">0:00</span></span>
+                     <button onclick="clearAll()" class="text-xs font-medium text-neutral-500 hover:text-white transition-colors px-2">Clear</button>
+                </div>
+            </div>
+            
+            <!-- Image Upload Area -->
+            <div 
+                id="image-drop-zone"
+                class="relative border border-dashed border-neutral-700 rounded-lg p-4 transition-all hover:border-neutral-500 cursor-pointer"
+                onclick="document.getElementById('image-input').click()"
+            >
+                <input 
+                    type="file" 
+                    id="image-input" 
+                    accept="image/png,image/jpeg,image/webp,image/heic,image/heif" 
+                    multiple 
+                    class="hidden"
+                    onchange="handleFileSelect(event)"
+                >
+                <div id="image-placeholder" class="flex items-center justify-center gap-3 py-2">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="text-neutral-500">
+                        <rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect>
+                        <circle cx="8.5" cy="8.5" r="1.5"></circle>
+                        <polyline points="21 15 16 10 5 21"></polyline>
+                    </svg>
+                    <span class="text-sm text-neutral-500">Drop images here or click to upload</span>
+                </div>
+                <div id="image-preview-container" class="hidden flex flex-wrap gap-2"></div>
+            </div>
+            
+            <div class="flex items-center justify-between">
+                <div class="text-xs text-neutral-500">
+                    Press <kbd class="bg-neutral-800 px-1.5 py-0.5 rounded border border-neutral-700 font-mono">Ctrl+Enter</kbd> to run
+                </div>
+                <div class="flex gap-3">
+                     <button 
+                        id="run-btn"
+                        onclick="runQuery()"
+                        class="px-6 py-2 bg-white text-black text-sm font-medium rounded-md hover:bg-neutral-200 transition-colors flex items-center gap-2"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                        Run
+                    </button>
+                    <button 
+                        id="stop-btn"
+                        onclick="stopQuery()"
+                        class="hidden px-6 py-2 bg-neutral-800 text-white text-sm font-medium rounded-md hover:bg-neutral-700 transition-colors flex items-center gap-2"
+                    >
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect></svg>
+                        Stop
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Progress Section -->
+        <section id="progress-section" class="hidden space-y-6 animate-fade-in">
+             <div class="flex items-center justify-between pb-2 border-b border-neutral-800">
+                <h2 class="text-sm font-medium text-white">Status</h2>
+                <span id="status-badge" class="text-xs font-mono text-neutral-400">Initializing...</span>
+            </div>
+            <div id="agents-container" class="space-y-4">
+                <!-- Agents will be injected here -->
+            </div>
+            
+            <div id="aggregation-status" class="hidden mt-6 pt-6 border-t border-neutral-800 fade-in">
+                <div class="flex items-center gap-3">
+                     <div class="relative w-4 h-4">
+                        <div class="absolute inset-0 border-2 border-neutral-800 rounded-full"></div>
+                        <div class="absolute inset-0 border-2 border-white rounded-full border-t-transparent animate-spin"></div>
+                    </div>
+                    <span id="aggregation-text" class="text-sm text-neutral-300">Synthesizing final answer...</span>
+                </div>
+            </div>
+        </section>
+
+        <!-- Output Section -->
+        <section id="output-section" class="hidden space-y-4 animate-fade-in">
+             <div class="flex items-center justify-between pb-2 border-b border-neutral-800">
+                <h2 class="text-sm font-medium text-white">Result</h2>
+                <button onclick="copyOutput()" class="text-xs text-neutral-500 hover:text-white transition-colors flex items-center gap-1">
+                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                    Copy
+                </button>
+            </div>
+            <div id="output-content" class="prose max-w-none text-sm"></div>
+            
+            <!-- Thinking Process Section -->
+            <div id="thinking-section" class="hidden mt-6 pt-4 border-t border-neutral-800">
+                <button onclick="toggleThinking()" class="flex items-center gap-2 text-xs font-medium text-neutral-400 hover:text-white transition-colors w-full text-left">
+                    <svg id="thinking-icon" class="w-4 h-4 transform transition-transform" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path></svg>
+                    View Thinking Process
+                </button>
+                <div id="thinking-content" class="hidden mt-4 space-y-4"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Footer -->
+    <footer class="py-6 border-t border-neutral-800 mt-auto">
+        <div class="max-w-5xl mx-auto px-6 flex items-center justify-between text-xs text-neutral-600">
+             <span id="status-text">Ready</span>
+             <span id="provider-info"></span>
+        </div>
+    </footer>
+
+    <!-- Settings Modal -->
+    <div id="settings-modal" class="fixed inset-0 z-[100] hidden">
+        <div class="absolute inset-0 bg-black/80 backdrop-blur-sm transition-opacity" onclick="toggleSettings()"></div>
+        <div class="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full max-w-sm">
+            <div class="bg-neutral-900 border border-neutral-800 rounded-lg shadow-2xl p-6 fade-in">
+                <div class="flex items-center justify-between mb-6">
+                    <h3 class="font-medium text-white">Settings</h3>
+                    <button onclick="toggleSettings()" class="text-neutral-500 hover:text-white">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                    </button>
+                </div>
+                
+                <div class="space-y-4">
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-medium text-neutral-400">Provider</label>
+                        <select id="settings-provider" class="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-neutral-600">
+                            <option value="gemini">Gemini</option>
+                            <option value="openrouter">OpenRouter</option>
+                        </select>
+                    </div>
+
+                    <div class="space-y-1.5">
+                        <label class="block text-xs font-medium text-neutral-400">Parallel Agents</label>
+                        <input id="settings-agents" type="number" min="1" max="10" class="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-neutral-600">
+                    </div>
+
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="space-y-1.5">
+                            <label class="block text-xs font-medium text-neutral-400">Timeout (s)</label>
+                            <input id="settings-timeout" type="number" min="30" class="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-neutral-600">
+                        </div>
+                         <div class="space-y-1.5">
+                            <label class="block text-xs font-medium text-neutral-400">Max Iterations</label>
+                            <input id="settings-iterations" type="number" min="1" class="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-neutral-600">
+                        </div>
+                    </div>
+
+                     <div class="space-y-1.5">
+                        <label class="block text-xs font-medium text-neutral-400">Gemini Model</label>
+                        <input id="settings-gemini-model" type="text" class="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-neutral-600">
+                    </div>
+                     <div class="space-y-1.5">
+                        <label class="block text-xs font-medium text-neutral-400">OpenRouter Model</label>
+                        <input id="settings-openrouter-model" type="text" class="w-full bg-neutral-950 border border-neutral-800 rounded px-3 py-2 text-sm text-white focus:outline-none focus:border-neutral-600">
+                    </div>
+                </div>
+
+                <div class="mt-6 flex gap-3">
+                    <button onclick="saveSettings()" class="flex-1 bg-white hover:bg-neutral-200 text-black text-sm font-medium py-2 rounded transition-colors">Save</button>
+                    <button onclick="toggleSettings()" class="flex-1 bg-neutral-800 hover:bg-neutral-700 text-white text-sm font-medium py-2 rounded transition-colors">Cancel</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="fixed bottom-6 right-6 z-[100] flex flex-col gap-2"></div>
+
+    <script>
+        let currentMode = 'multi';
+        let isRunning = false;
+        let eventSource = null;
+        let timerInterval = null;
+        let startTime = null;
+        let config = {};
+        let uploadedImages = [];
+
+        async function init() {
+            await loadConfig();
+            setMode('multi');
+            updateModelDisplay();
+            setupImageDropZone();
+            
+            document.getElementById('query-input').addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === 'Enter') {
+                    runQuery();
+                }
+            });
+        }
+
+        function setupImageDropZone() {
+            const dropZone = document.getElementById('image-drop-zone');
+            
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+            
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.add('border-white', 'bg-neutral-800/50');
+                    dropZone.classList.remove('border-neutral-700');
+                }, false);
+            });
+            
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => {
+                    dropZone.classList.remove('border-white', 'bg-neutral-800/50');
+                    dropZone.classList.add('border-neutral-700');
+                }, false);
+            });
+            
+            dropZone.addEventListener('drop', handleDrop, false);
+        }
+
+        function handleDrop(e) {
+            const files = e.dataTransfer.files;
+            handleFiles(files);
+        }
+
+        function handleFileSelect(e) {
+            const files = e.target.files;
+            handleFiles(files);
+        }
+
+        async function handleFiles(files) {
+            const validTypes = ['image/png', 'image/jpeg', 'image/webp', 'image/heic', 'image/heif'];
+            
+            for (const file of files) {
+                if (!validTypes.includes(file.type)) {
+                    showToast(`Invalid file type: ${file.name}`, 'warning');
+                    continue;
+                }
+                
+                if (file.size > 20 * 1024 * 1024) {
+                    showToast(`File too large: ${file.name} (max 20MB)`, 'warning');
+                    continue;
+                }
+                
+                const base64 = await fileToBase64(file);
+                uploadedImages.push({
+                    name: file.name,
+                    type: file.type,
+                    data: base64,
+                    size: file.size
+                });
+            }
+            
+            renderImagePreviews();
+        }
+
+        function fileToBase64(file) {
+            return new Promise((resolve, reject) => {
+                const reader = new FileReader();
+                reader.onload = () => {
+                    const base64 = reader.result.split(',')[1];
+                    resolve(base64);
+                };
+                reader.onerror = reject;
+                reader.readAsDataURL(file);
+            });
+        }
+
+        function renderImagePreviews() {
+            const container = document.getElementById('image-preview-container');
+            const placeholder = document.getElementById('image-placeholder');
+            
+            if (uploadedImages.length === 0) {
+                container.classList.add('hidden');
+                placeholder.classList.remove('hidden');
+                return;
+            }
+            
+            placeholder.classList.add('hidden');
+            container.classList.remove('hidden');
+            container.innerHTML = '';
+            
+            uploadedImages.forEach((img, index) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'relative group';
+                
+                const imgEl = document.createElement('img');
+                imgEl.src = `data:${img.type};base64,${img.data}`;
+                imgEl.className = 'w-16 h-16 object-cover rounded border border-neutral-700';
+                imgEl.alt = img.name;
+                
+                const removeBtn = document.createElement('button');
+                removeBtn.className = 'absolute -top-1 -right-1 w-4 h-4 bg-neutral-900 border border-neutral-700 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity';
+                removeBtn.innerHTML = '<svg width="8" height="8" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>';
+                removeBtn.onclick = (e) => {
+                    e.stopPropagation();
+                    removeImage(index);
+                };
+                
+                wrapper.appendChild(imgEl);
+                wrapper.appendChild(removeBtn);
+                container.appendChild(wrapper);
+            });
+            
+            const countBadge = document.createElement('div');
+            countBadge.className = 'flex items-center justify-center text-xs text-neutral-500 px-2';
+            countBadge.textContent = `${uploadedImages.length} image${uploadedImages.length > 1 ? 's' : ''}`;
+            container.appendChild(countBadge);
+        }
+
+        function removeImage(index) {
+            uploadedImages.splice(index, 1);
+            renderImagePreviews();
+        }
+
+        function clearImages() {
+            uploadedImages = [];
+            document.getElementById('image-input').value = '';
+            renderImagePreviews();
+        }
+
+        async function loadConfig() {
+            try {
+                const res = await fetch('/api/config');
+                config = await res.json();
+                updateModelDisplay();
+                updateSettingsForm();
+            } catch (e) {
+                showToast('Failed to load config', 'error');
+            }
+        }
+
+        function updateModelDisplay() {
+            const provider = config.provider || 'gemini';
+            const model = provider === 'gemini' ? config.gemini?.model : config.openrouter?.model;
+            const modelName = model?.split('/').pop() || model || 'Unknown';
+            
+            document.getElementById('model-display').textContent = `${provider} • ${modelName}`;
+            document.getElementById('provider-info').textContent = `${provider} / ${modelName}`;
+        }
+
+        function updateSettingsForm() {
+            document.getElementById('settings-provider').value = config.provider || 'gemini';
+            document.getElementById('settings-agents').value = config.orchestrator?.parallel_agents || 4;
+            document.getElementById('settings-timeout').value = config.orchestrator?.task_timeout || 300;
+            document.getElementById('settings-iterations').value = config.agent?.max_iterations || 10;
+            document.getElementById('settings-gemini-model').value = config.gemini?.model || '';
+            document.getElementById('settings-openrouter-model').value = config.openrouter?.model || '';
+        }
+
+        function setMode(mode) {
+            currentMode = mode;
+            const singleBtn = document.getElementById('mode-single');
+            const multiBtn = document.getElementById('mode-multi');
+            const megamindBtn = document.getElementById('mode-megamind');
+            
+            const activeClass = 'mode-btn px-4 py-1.5 text-xs font-medium rounded transition-colors bg-white text-black shadow-sm';
+            const inactiveClass = 'mode-btn px-4 py-1.5 text-xs font-medium rounded transition-colors text-neutral-400 hover:text-white';
+            
+            singleBtn.className = mode === 'single' ? activeClass : inactiveClass;
+            multiBtn.className = mode === 'multi' ? activeClass : inactiveClass;
+            megamindBtn.className = mode === 'megamind' ? activeClass : inactiveClass;
+        }
+
+        function toggleSettings() {
+            const modal = document.getElementById('settings-modal');
+            modal.classList.toggle('hidden');
+            if (!modal.classList.contains('hidden')) {
+                updateSettingsForm();
+            }
+        }
+
+        async function saveSettings() {
+            try {
+                const updates = {
+                    provider: document.getElementById('settings-provider').value,
+                    parallel_agents: document.getElementById('settings-agents').value,
+                    task_timeout: document.getElementById('settings-timeout').value,
+                    max_iterations: document.getElementById('settings-iterations').value,
+                    gemini_model: document.getElementById('settings-gemini-model').value,
+                    openrouter_model: document.getElementById('settings-openrouter-model').value,
+                };
+                
+                const res = await fetch('/api/config', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(updates)
+                });
+                
+                if (res.ok) {
+                    await loadConfig();
+                    toggleSettings();
+                    showToast('Settings saved', 'success');
+                } else {
+                    throw new Error('Failed to save');
+                }
+            } catch (e) {
+                showToast('Failed to save settings', 'error');
+            }
+        }
+
+        function generateSessionId() {
+            return 'session_' + Date.now() + '_' + Math.random().toString(36).substr(2, 9);
+        }
+
+        async function runQuery() {
+            const query = document.getElementById('query-input').value.trim();
+            if (!query) {
+                showToast('Please enter a query', 'warning');
+                return;
+            }
+            
+            if (isRunning) return;
+            
+            isRunning = true;
+            startTime = Date.now();
+            
+            document.getElementById('run-btn').classList.add('hidden');
+            document.getElementById('stop-btn').classList.remove('hidden');
+            document.getElementById('timer').classList.remove('hidden');
+            document.getElementById('progress-section').classList.remove('hidden');
+            document.getElementById('output-section').classList.add('hidden');
+            
+            updateStatus('Starting...', 'neutral');
+            startTimer();
+            
+            const sessionId = generateSessionId();
+            let endpoint = '/api/run/single';
+            if (currentMode === 'multi') endpoint = '/api/run/multi';
+            else if (currentMode === 'megamind') endpoint = '/api/run/megamind';
+            
+            try {
+                const res = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        query, 
+                        session_id: sessionId,
+                        images: uploadedImages.map(img => ({
+                            data: img.data,
+                            mime_type: img.type
+                        }))
+                    })
+                });
+                
+                if (!res.ok) throw new Error('Failed to start');
+                
+                if (currentMode === 'megamind') {
+                    setupMegamindProgress();
+                } else {
+                    setupAgentProgress(currentMode === 'multi' ? (config.orchestrator?.parallel_agents || 4) : 1);
+                }
+                listenToStream(sessionId);
+                
+            } catch (e) {
+                showToast('Failed to start query: ' + e.message, 'error');
+                resetUI();
+            }
+        }
+
+        function setupAgentProgress(numAgents) {
+            document.getElementById('aggregation-status').classList.add('hidden');
+            const container = document.getElementById('agents-container');
+            container.classList.remove('hidden');
+            container.innerHTML = '';
+            
+            for (let i = 0; i < numAgents; i++) {
+                const agentDiv = document.createElement('div');
+                agentDiv.id = `agent-${i}`;
+                agentDiv.className = 'group';
+                agentDiv.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <span class="text-xs font-mono text-neutral-500 group-hover:text-neutral-300 transition-colors">AGENT ${String(i + 1).padStart(2, '0')}</span>
+                        <span class="status-text text-xs text-neutral-600">Queued</span>
+                    </div>
+                    <div class="h-1 bg-neutral-800 rounded-full overflow-hidden">
+                        <div class="progress-bar h-full bg-neutral-600 w-0 transition-all duration-300"></div>
+                    </div>
+                `;
+                container.appendChild(agentDiv);
+            }
+        }
+
+        function updateAgentProgress(agentId, status) {
+            const agentDiv = document.getElementById(`agent-${agentId}`);
+            if (!agentDiv) return;
+            
+            const progressBar = agentDiv.querySelector('.progress-bar');
+            const statusText = agentDiv.querySelector('.status-text');
+            
+            // Map status to visual styles
+            let width = '0%';
+            let color = 'bg-neutral-600';
+            let text = 'Queued';
+            let textColor = 'text-neutral-600';
+
+            switch(status) {
+                case 'QUEUED':
+                    width = '0%';
+                    color = 'bg-neutral-600';
+                    text = 'Queued';
+                    break;
+                case 'INITIALIZING':
+                    width = '10%';
+                    color = 'bg-white';
+                    text = 'Initializing...';
+                    textColor = 'text-neutral-400';
+                    break;
+                case 'PROCESSING':
+                case 'PROCESSING...':
+                    width = '50%';
+                    color = 'bg-white';
+                    text = 'Processing...';
+                    textColor = 'text-white';
+                    break;
+                case 'COMPLETED':
+                    width = '100%';
+                    color = 'bg-white';
+                    text = 'Completed';
+                    textColor = 'text-white';
+                    break;
+                case 'FAILED':
+                    width = '100%';
+                    color = 'bg-red-500';
+                    text = 'Failed';
+                    textColor = 'text-red-500';
+                    break;
+            }
+            
+            progressBar.style.width = width;
+            progressBar.className = `progress-bar h-full ${color} transition-all duration-300`;
+            statusText.textContent = text;
+            statusText.className = `status-text text-xs ${textColor}`;
+        }
+
+        function listenToStream(sessionId) {
+            eventSource = new EventSource(`/api/stream/${sessionId}`);
+            
+            eventSource.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                
+                switch (data.type) {
+                    case 'status':
+                        updateStatus(data.message, 'neutral');
+                        break;
+                    case 'stage':
+                        if (data.stage === 'aggregating') {
+                            document.getElementById('aggregation-status').classList.remove('hidden');
+                            updateStatus(data.message, 'neutral');
+                        }
+                        break;
+                    case 'progress':
+                        updateAgentProgress(data.agent_id, data.status);
+                        break;
+                    case 'config':
+                        setupAgentProgress(data.num_agents);
+                        break;
+                    case 'result':
+                        showOutput(data.content);
+                        break;
+                    case 'thinking':
+                        showThinking(data.content);
+                        break;
+                    case 'megamind_config':
+                        break;
+                    case 'megamind_stage':
+                        updateMegamindStage(data.stage, data.status);
+                        break;
+                    case 'megamind_agent':
+                        updateMegamindAgent(data.agent_id, data.status);
+                        break;
+                    case 'megamind_thinking':
+                        showMegamindThinking(data.content);
+                        break;
+                    case 'error':
+                        showToast('Error: ' + data.message, 'error');
+                        updateStatus('Failed', 'red');
+                        break;
+                    case 'done':
+                        eventSource.close();
+                        updateStatus('Completed', 'success');
+                        resetUI();
+                        break;
+                    case 'heartbeat':
+                        break;
+                }
+            };
+            
+            eventSource.onerror = () => {
+                eventSource.close();
+                if (isRunning) {
+                    showToast('Connection lost', 'error');
+                    resetUI();
+                }
+            };
+        }
+
+        function stopQuery() {
+            if (eventSource) {
+                eventSource.close();
+            }
+            updateStatus('Stopped', 'warning');
+            resetUI();
+        }
+
+        function resetUI() {
+            isRunning = false;
+            stopTimer();
+            document.getElementById('run-btn').classList.remove('hidden');
+            document.getElementById('stop-btn').classList.add('hidden');
+        }
+
+        let rawOutputContent = '';
+
+        function cleanMarkdownText(text) {
+            text = text.replace(/\*\*\*/g, '');
+            text = text.replace(/^\s*[-*]\s*\*\*/gm, '- **');
+            // Remove trailing JSON blocks if any
+            text = text.replace(/```json\s*\{[\s\S]*?\}\s*```\s*$/g, '');
+            text = text.replace(/\{[\s\S]*?"summary"[\s\S]*?"final_message"[\s\S]*?\}\s*$/g, '');
+            return text;
+        }
+
+        function showOutput(content) {
+            const section = document.getElementById('output-section');
+            const outputEl = document.getElementById('output-content');
+            
+            rawOutputContent = content;
+            section.classList.remove('hidden');
+            
+            try {
+                marked.setOptions({
+                    breaks: true,
+                    gfm: true,
+                    sanitize: false
+                });
+                const cleanedContent = cleanMarkdownText(content);
+                outputEl.innerHTML = marked.parse(cleanedContent);
+            } catch (e) {
+                outputEl.textContent = content;
+            }
+        }
+
+        function showThinking(agentResults) {
+            const section = document.getElementById('thinking-section');
+            const content = document.getElementById('thinking-content');
+            
+            if (!agentResults || agentResults.length === 0) return;
+            
+            section.classList.remove('hidden');
+            content.innerHTML = '';
+            
+            agentResults.forEach((result, index) => {
+                const div = document.createElement('div');
+                div.className = 'bg-neutral-900 rounded p-4 border border-neutral-800';
+                
+                const header = document.createElement('div');
+                header.className = 'flex items-center justify-between mb-2 pb-2 border-b border-neutral-800';
+                header.innerHTML = `<span class="text-xs font-mono text-neutral-400">AGENT ${String(index + 1).padStart(2, '0')}</span>`;
+                
+                const body = document.createElement('div');
+                body.className = 'prose max-w-none text-xs text-neutral-400';
+                
+                try {
+                    body.innerHTML = marked.parse(result.response || '');
+                } catch (e) {
+                    body.textContent = result.response || '';
+                }
+                
+                div.appendChild(header);
+                div.appendChild(body);
+                content.appendChild(div);
+            });
+        }
+
+        function toggleThinking() {
+            const content = document.getElementById('thinking-content');
+            const icon = document.getElementById('thinking-icon');
+            
+            content.classList.toggle('hidden');
+            if (content.classList.contains('hidden')) {
+                icon.style.transform = 'rotate(0deg)';
+            } else {
+                icon.style.transform = 'rotate(90deg)';
+            }
+        }
+
+        function copyOutput() {
+            if (rawOutputContent) {
+                navigator.clipboard.writeText(rawOutputContent).then(() => {
+                    showToast('Copied', 'success');
+                });
+            }
+        }
+
+        function clearAll() {
+            document.getElementById('query-input').value = '';
+            document.getElementById('output-content').innerHTML = '';
+            rawOutputContent = '';
+            document.getElementById('output-section').classList.add('hidden');
+            document.getElementById('thinking-section').classList.add('hidden');
+            document.getElementById('thinking-content').innerHTML = '';
+            document.getElementById('progress-section').classList.add('hidden');
+            document.getElementById('aggregation-status').classList.add('hidden');
+            document.getElementById('timer').classList.add('hidden');
+            document.getElementById('timer-value').textContent = '0:00';
+            clearImages();
+            updateStatus('Ready', 'neutral');
+        }
+        
+        function setupMegamindProgress() {
+            const container = document.getElementById('agents-container');
+            container.classList.remove('hidden');
+            container.innerHTML = '';
+            
+            // Define agents config
+            const agents = [
+                { id: 'research', name: 'RESEARCH AGENT', role: 'Research' },
+                { id: 'analysis', name: 'ANALYSIS AGENT', role: 'Analysis' },
+                { id: 'alternatives', name: 'ALTERNATIVES AGENT', role: 'Alternatives' },
+                { id: 'verification', name: 'VERIFICATION AGENT', role: 'Verification' },
+                { id: 'separator' },
+                { id: 'validator_1', name: 'VALIDATION AGENT 1', role: 'Accuracy Checker' },
+                { id: 'validator_2', name: 'VALIDATION AGENT 2', role: 'Quality Reviewer' }
+            ];
+            
+            agents.forEach(agent => {
+                if (agent.id === 'separator') {
+                    const sep = document.createElement('div');
+                    sep.className = 'h-px bg-neutral-800 my-4';
+                    container.appendChild(sep);
+                    return;
+                }
+                
+                const agentDiv = document.createElement('div');
+                agentDiv.id = `mm-agent-${agent.id}`;
+                agentDiv.className = 'group';
+                agentDiv.innerHTML = `
+                    <div class="flex items-center justify-between mb-2">
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs font-mono text-neutral-500 group-hover:text-neutral-300 transition-colors">${agent.name}</span>
+                            <span class="text-[10px] px-1.5 py-0.5 rounded bg-neutral-800 text-neutral-400 border border-neutral-700">${agent.role}</span>
+                        </div>
+                        <span class="status-text text-xs text-neutral-600">Queued</span>
+                    </div>
+                    <div class="h-1 bg-neutral-800 rounded-full overflow-hidden">
+                        <div class="progress-bar h-full bg-neutral-600 w-0 transition-all duration-300"></div>
+                    </div>
+                `;
+                container.appendChild(agentDiv);
+            });
+            
+            document.getElementById('aggregation-status').classList.add('hidden');
+        }
+        
+        function resetMegamindProgress() {
+            // No specific reset needed as setupMegamindProgress rebuilds the UI
+        }
+        
+        function updateMegamindStage(stage, status) {
+            const stages = {
+                'question_generation': 'Generating Questions...',
+                'parallel_research': 'Running Research Agents...',
+                'first_synthesis': 'Synthesizing First Draft...',
+                'validation': 'Validating Draft...',
+                'final_synthesis': 'Finalizing Answer...'
+            };
+            
+            if (status === 'IN_PROGRESS') {
+                updateStatus(stages[stage] || 'Processing...', 'neutral');
+                
+                if (stage === 'first_synthesis' || stage === 'final_synthesis') {
+                    document.getElementById('aggregation-status').classList.remove('hidden');
+                    document.getElementById('aggregation-text').textContent = stage === 'first_synthesis' ? 'Synthesizing first draft...' : 'Synthesizing final answer...';
+                } else {
+                    document.getElementById('aggregation-status').classList.add('hidden');
+                }
+            } else if (status === 'COMPLETED' && stage === 'final_synthesis') {
+                document.getElementById('aggregation-status').classList.add('hidden');
+            }
+        }
+        
+        function updateMegamindAgent(agentId, status) {
+            if (agentId === 'question_gen' || agentId === 'synthesis' || agentId === 'final') return;
+            
+            const el = document.getElementById(`mm-agent-${agentId}`);
+            if (!el) return;
+            
+            const progressBar = el.querySelector('.progress-bar');
+            const statusText = el.querySelector('.status-text');
+            
+            // Map status to visual styles
+            let width = '0%';
+            let color = 'bg-neutral-600';
+            let text = 'Queued';
+            let textColor = 'text-neutral-600';
+
+            switch(status) {
+                case 'QUEUED':
+                    width = '0%';
+                    color = 'bg-neutral-600';
+                    text = 'Queued';
+                    break;
+                case 'PROCESSING':
+                    width = '50%';
+                    color = 'bg-white';
+                    text = 'Processing...';
+                    textColor = 'text-white';
+                    break;
+                case 'COMPLETED':
+                    width = '100%';
+                    color = 'bg-white';
+                    text = 'Completed';
+                    textColor = 'text-white';
+                    break;
+                case 'FAILED':
+                    width = '100%';
+                    color = 'bg-red-500';
+                    text = 'Failed';
+                    textColor = 'text-red-500';
+                    break;
+            }
+            
+            progressBar.style.width = width;
+            progressBar.className = `progress-bar h-full ${color} transition-all duration-300`;
+            statusText.textContent = text;
+            statusText.className = `status-text text-xs ${textColor}`;
+        }
+        
+        function showMegamindThinking(data) {
+            const section = document.getElementById('thinking-section');
+            const content = document.getElementById('thinking-content');
+            
+            if (!data) return;
+            
+            section.classList.remove('hidden');
+            content.innerHTML = '';
+            
+            if (data.questions && data.questions.length > 0) {
+                const questionsDiv = document.createElement('div');
+                questionsDiv.className = 'bg-neutral-900 rounded p-4 border border-neutral-800 mb-4';
+                questionsDiv.innerHTML = `
+                    <div class="text-xs font-mono text-neutral-400 mb-3">GENERATED QUESTIONS</div>
+                    <ol class="list-decimal list-inside space-y-2 text-sm text-neutral-300">
+                        ${data.questions.map(q => `<li>${q}</li>`).join('')}
+                    </ol>
+                `;
+                content.appendChild(questionsDiv);
+            }
+            
+            if (data.research_results && data.research_results.length > 0) {
+                const researchDiv = document.createElement('div');
+                researchDiv.className = 'mb-4';
+                researchDiv.innerHTML = '<div class="text-xs font-mono text-neutral-400 mb-3">RESEARCH AGENT RESPONSES</div>';
+                
+                data.research_results.forEach((result) => {
+                    const agentNames = {
+                        'research': 'Research',
+                        'analysis': 'Analysis',
+                        'alternatives': 'Alternatives',
+                        'verification': 'Verification'
+                    };
+                    const name = agentNames[result.agent_id] || result.agent_id;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'bg-neutral-900 rounded p-4 border border-neutral-800 mb-2';
+                    div.innerHTML = `
+                        <div class="text-xs font-mono text-neutral-500 mb-2">${name.toUpperCase()} AGENT</div>
+                        <div class="prose max-w-none text-xs text-neutral-400">${marked.parse(result.response || '')}</div>
+                    `;
+                    researchDiv.appendChild(div);
+                });
+                content.appendChild(researchDiv);
+            }
+            
+            if (data.first_draft) {
+                const draftDiv = document.createElement('div');
+                draftDiv.className = 'bg-neutral-900 rounded p-4 border border-neutral-800 mb-4';
+                draftDiv.innerHTML = `
+                    <div class="text-xs font-mono text-neutral-400 mb-3">FIRST DRAFT</div>
+                    <div class="prose max-w-none text-xs text-neutral-400">${marked.parse(data.first_draft)}</div>
+                `;
+                content.appendChild(draftDiv);
+            }
+            
+            if (data.validation_results && data.validation_results.length > 0) {
+                const validationDiv = document.createElement('div');
+                validationDiv.className = 'mb-4';
+                validationDiv.innerHTML = '<div class="text-xs font-mono text-neutral-400 mb-3">VALIDATION FEEDBACK</div>';
+                
+                data.validation_results.forEach((result) => {
+                    const validatorNames = {
+                        'validator_1': 'Accuracy Checker',
+                        'validator_2': 'Quality Reviewer'
+                    };
+                    const name = validatorNames[result.agent_id] || result.agent_id;
+                    
+                    const div = document.createElement('div');
+                    div.className = 'bg-neutral-900 rounded p-4 border border-neutral-800 mb-2';
+                    div.innerHTML = `
+                        <div class="text-xs font-mono text-neutral-500 mb-2">${name.toUpperCase()}</div>
+                        <div class="prose max-w-none text-xs text-neutral-400">${marked.parse(result.response || '')}</div>
+                    `;
+                    validationDiv.appendChild(div);
+                });
+                content.appendChild(validationDiv);
+            }
+        }
+
+        function updateStatus(message, type) {
+            document.getElementById('status-text').textContent = message;
+            const badge = document.getElementById('status-badge');
+            badge.textContent = message;
+            
+            // Minimal colors for badges
+            if (type === 'error' || type === 'red') badge.className = 'text-xs font-mono text-red-500';
+            else if (type === 'success' || type === 'green') badge.className = 'text-xs font-mono text-green-500';
+            else if (type === 'warning' || type === 'yellow') badge.className = 'text-xs font-mono text-yellow-500';
+            else badge.className = 'text-xs font-mono text-neutral-400';
+        }
+
+        function startTimer() {
+            stopTimer();
+            timerInterval = setInterval(() => {
+                const elapsed = Math.floor((Date.now() - startTime) / 1000);
+                const mins = Math.floor(elapsed / 60);
+                const secs = elapsed % 60;
+                document.getElementById('timer-value').textContent = `${mins}:${String(secs).padStart(2, '0')}`;
+            }, 1000);
+        }
+
+        function stopTimer() {
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+        }
+
+        function showToast(message, type = 'info') {
+            const container = document.getElementById('toast-container');
+            const toast = document.createElement('div');
+            
+            let bgClass = 'bg-neutral-800 text-white border-neutral-700';
+            if (type === 'error') bgClass = 'bg-red-900/50 text-red-200 border-red-800';
+            if (type === 'success') bgClass = 'bg-green-900/50 text-green-200 border-green-800';
+            if (type === 'warning') bgClass = 'bg-yellow-900/50 text-yellow-200 border-yellow-800';
+            
+            toast.className = `px-4 py-2 rounded border text-xs font-medium fade-in shadow-lg ${bgClass}`;
+            toast.textContent = message;
+            
+            container.appendChild(toast);
+            
+            setTimeout(() => {
+                toast.style.opacity = '0';
+                toast.style.transform = 'translateY(10px)';
+                toast.style.transition = 'all 0.2s ease-out';
+                setTimeout(() => toast.remove(), 200);
+            }, 3000);
+        }
+
+        init();
+    </script>
+</body>
+</html>
